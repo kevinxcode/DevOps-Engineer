@@ -1,0 +1,61 @@
+```
+$config['sess_driver'] = 'redis';
+$config['sess_save_path'] = "tcp://193.203.165.202:6379?weight=1, tcp://193.203.165.202:6379?weight=2&timeout=2.5, tcp://193.203.165.202:6379?weight=2&read_timeout=2.5"; // Set timeout to 10 seconds
+$config['sess_cookie_name'] = 'natuna_sessions';
+$config['sess_expiration'] = 7200; // 2 hours
+$config['sess_use_database'] = FALSE;
+$config['sess_table_name'] = '';
+$config['sess_match_ip'] = FALSE;
+$config['sess_match_useragent'] = TRUE;
+$config['sess_time_to_update'] = 300; // 5 minutes
+$config['sess_regenerate_destroy'] = FALSE;
+```
+
+```
+pecl install redis
+```
+
+# on project
+```
+composer require predis/predis
+```
+
+```
+FROM php:8.1-apache
+
+# Install system dependencies and PHP extensions
+RUN apt-get update && \
+    apt-get install -y \
+        libpq-dev \
+        libicu-dev \
+        libpng-dev \
+        libjpeg-dev \
+        zlib1g-dev \
+        libzip-dev \
+        git \
+        zip \
+        unzip \
+        vim \
+        libssl-dev && \
+    docker-php-ext-configure gd --with-jpeg && \
+    docker-php-ext-install gd pdo pdo_mysql mysqli pdo_pgsql pgsql intl zip && \
+    pecl install redis && \
+    docker-php-ext-enable redis && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Enable Apache mod_rewrite and mod_deflate
+RUN a2enmod rewrite deflate && \
+    sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
+
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Copy custom php.ini to the container
+COPY php.ini /usr/local/etc/php/php.ini
+
+# Expose port 80 to the outside world
+EXPOSE 80
+
+# Start Apache in the foreground
+CMD ["apache2-foreground"]
+```
